@@ -7,14 +7,16 @@ from qnet import DeepQNetwork
 from replay_buffer import ReplayBuffer
 
 
-class Agent():
+class DQNAgent():
     def __init__(self, gamma, epsilon, lr, state_dims, n_actions, hidden_dims,
-                eps_min=0.1, eps_decay=0.99, mem_size=100000, batch_size=128,
+                eps_min=0.1, eps_decay=0.99, mem_size=100000, batch_size=64,
                 tau=1e-3, update_every=4):
         self.gamma = gamma
         self.epsilon = epsilon 
         self.lr = lr 
         self.state_dims = state_dims
+        self.mem_size = mem_size 
+        self.batch_size = batch_size
         self.n_actions = n_actions
         self.hidden_dims = hidden_dims
         self.eps_min = eps_min
@@ -23,7 +25,7 @@ class Agent():
         self.update_every = update_every
         self.step_counter = 0
         self.action_space = [i for i in range(self.n_actions)]
-        self.buffer = ReplayBuffer(self.input_dims, self.mem_size, self.batch_size)
+        self.buffer = ReplayBuffer(self.state_dims, self.mem_size, self.batch_size)
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         self.qnet = DeepQNetwork(self.state_dims, self.n_actions, 
@@ -32,18 +34,18 @@ class Agent():
         self.target_qnet = DeepQNetwork(self.state_dims, self.n_actions, 
                                         self.hidden_dims, self.lr)
 
-        self.criterion =  F.mse_loss()
+        self.criterion =  F.mse_loss
         self.optimizer = optim.Adam(self.qnet.parameters(), lr=self.lr)
 
 
     def act(self, state):
         if np.random.random() >  self.epsilon:
-            state = torch.from_numpy(state).float().unsqueeze(0).to(self.qnet.device)
+            state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
             self.qnet.eval()
             with torch.no_grad():
                 qs = self.qnet(state)
             self.qnet.train()
-            action = np.argmax(qs.item())
+            action = torch.argmax(qs, 1).item()
         else:
             action = np.random.choice(self.action_space)
 
@@ -54,17 +56,18 @@ class Agent():
         if self.buffer.counter < self.buffer.batch_size:
             return 
 
-        states, actions, rewards, next_states, dones = self.buffer.sample(self.qnet.device)
+        states, actions, rewards, next_states, dones = self.buffer.sample(self.device)
 
-        q_expected = self.qnet(states).gather(1, actions)
+        q_expected = self.qnet(states).gather(1, actions.unsqueeze(1))
 
         q_target_next = self.target_qnet(next_states).detach().max(1)[0].unsqueeze(1)
-        q_target = rewards + (self.gamma * q_target_next * (1 - dones))
+        
+        q_target = rewards.unsqueeze(1) + (self.gamma * q_target_next * (1 - dones.unsqueeze(1)))
 
         loss = self.criterion(q_expected, q_target)
-        self.qnet.optimizer.zero_grad()
+        self.optimizer.zero_grad()
         loss.backward()
-        self.qnet.optimizer.step()
+        self.optimizer.step()
 
         self.epsilon = max(self.eps_min, self.epsilon * self.eps_decay)
 

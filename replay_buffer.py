@@ -11,9 +11,9 @@ class ReplayBuffer():
 
         self.state_memory = np.zeros((self.mem_size, input_dims), dtype=np.float32)
         self.next_state_memory = np.zeros((self.mem_size, input_dims), dtype=np.float32)
-        self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
+        self.action_memory = np.zeros(self.mem_size, dtype=np.long)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
-        self.done_memory = np.zeros(self.mem_size, dtype=np.bool)
+        self.done_memory = np.zeros(self.mem_size, dtype=np.float32)
 
 
     def save(self, state, action, reward, next_state, done):
@@ -37,7 +37,7 @@ class ReplayBuffer():
             actions = torch.from_numpy(self.action_memory[batch]).to(device)
             rewards = torch.from_numpy(self.reward_memory[batch]).to(device)
             next_states = torch.from_numpy(self.next_state_memory[batch]).to(device)
-            dones = torch.from_numpy(self.done_memory[batch]).to(device)
+            dones = torch.tensor(self.done_memory[batch]).to(device)
             return (states, actions, rewards, next_states, dones)
 
 

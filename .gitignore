@@ -1,6 +1,7 @@
 # to delete
 Banana.app/
 python/
+checkpoint.pth
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

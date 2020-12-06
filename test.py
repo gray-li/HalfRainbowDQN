@@ -16,7 +16,7 @@ state = env_info.vector_observations[0]            # get the current state
 score = 0                                          # initialize the score
 
 # watch the agent play 100 steps
-while i in range(100):
+for i in range(100):
     action = agent.act(state, 0)            # select an action
     env_info = env.step(action)[brain_name]        # send the action to the environment
     next_state = env_info.vector_observations[0]   # get the next state

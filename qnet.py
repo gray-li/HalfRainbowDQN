@@ -1,31 +1,29 @@
+import torch
 from torch import nn 
 import torch.nn.functional as F 
 
 
-class DeepQNetwork(nn.Module):
+class Network(nn.Module):
+    """Actor (Policy) Model."""
 
-    def __init__(self, input_dims, output_dims, hidden_dims, lr):
-        super().__init__()
-        self.lr = lr
-        self.input_dims = input_dims
-        self.output_dims = output_dims 
-        self.hidden_dims = hidden_dims
+    def __init__(self, state_size, action_size, seed, fc1_units=128, fc2_units=128):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): Dimension of each state
+            action_size (int): Dimension of each action
+            seed (int): Random seed
+            fc1_units (int): Number of nodes in first hidden layer
+            fc2_units (int): Number of nodes in second hidden layer
+        """
+        super(Network, self).__init__()
+        self.seed = torch.manual_seed(seed)
+        self.fc1 = nn.Linear(state_size, fc1_units)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, action_size)
 
-        layer_dims = zip(hidden_dims[:-1], hidden_dims[1:])
-        self.hidden = nn.ModuleList([nn.Linear(input_dims, hidden_dims[0])])
-        self.hidden.extend([nn.Linear(h_in, h_out) for h_in, h_out in layer_dims])
-        self.output = nn.Linear(hidden_dims[-1], self.output_dims)
-
-
-    def forward(self, x):
-        for layer in self.hidden:
-            x = F.relu(layer(x))
-
-        return self.output(x)
-
-        
-        
-if __name__ == '__main__':
-    dqn = DeepQNetwork((3), (4), [4,5,6], 0.01)
-    dqn
-
+    def forward(self, state):
+        """Build a network that maps state -> action values."""
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
